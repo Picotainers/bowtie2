@@ -1,5 +1,5 @@
 # bowtie2
-Small, distroless-when-possible container for `bowtie2`.
+Small compatibility-focused container for `bowtie2`.
 
 ## how to use
 ```bash

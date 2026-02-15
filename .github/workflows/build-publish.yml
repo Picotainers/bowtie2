@@ -1,4 +1,4 @@
-name: Build and Publish Distroless bowtie2
+name: Build and Publish bowtie2
 
 on:
   push:
