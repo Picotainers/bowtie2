@@ -30,6 +30,7 @@ RUN apt-get update \
         liblzma5 \
         zlib1g \
         perl \
+        libsys-hostname-perl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /src/bowtie2/bowtie2 /usr/local/bin/bowtie2
