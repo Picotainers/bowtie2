@@ -1,34 +1,45 @@
 # syntax=docker/dockerfile:1
-# Compatibility-first template for bowtie2.
-# Installs package from Bioconda and copies the full conda runtime to avoid missing libs/interpreters.
 
-FROM mambaorg/micromamba:2.0.5-debian12-slim AS builder
+FROM debian:bookworm AS builder
 
-RUN micromamba install -y -n base -c conda-forge -c bioconda \
-    bowtie2 \
-    && micromamba clean --all --yes
+ARG BOWTIE2_REF=v2.5.4
 
-# Resolve a runnable command for this package.
-# Prefer exact match, then underscore variant, then prefix match.
-RUN set -eux; \
-    BIN=""; \
-    if [ -x "/opt/conda/bin/bowtie2" ]; then BIN="/opt/conda/bin/bowtie2"; fi; \
-    if [ -z "$BIN" ]; then CAND="/opt/conda/bin/$(echo bowtie2 | tr '-' '_')"; [ -x "$CAND" ] && BIN="$CAND" || true; fi; \
-    if [ -z "$BIN" ]; then BIN="$(find /opt/conda/bin -maxdepth 1 -type f -perm -111 -name 'bowtie2*' | head -n1 || true)"; fi; \
-    test -n "$BIN"; \
-    printf '%s\n' "$BIN" > /tmp/tool-entry-path
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        git \
+        libbz2-dev \
+        liblzma-dev \
+        zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM mambaorg/micromamba:2.0.5-debian12-slim
+WORKDIR /src
+RUN git clone --depth 1 --branch "${BOWTIE2_REF}" https://github.com/BenLangmead/bowtie2.git bowtie2 \
+    || (git clone https://github.com/BenLangmead/bowtie2.git bowtie2 && cd bowtie2 && git checkout "${BOWTIE2_REF}")
 
-COPY --from=builder /opt/conda /opt/conda
-COPY --from=builder /tmp/tool-entry-path /tmp/tool-entry-path
+WORKDIR /src/bowtie2
+RUN make -j"$(nproc)"
 
-USER root
-ENV PATH="/opt/conda/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/conda/lib:/opt/conda/lib64"
-RUN set -eux; \
-    BIN="$(cat /tmp/tool-entry-path)"; \
-    printf '#!/usr/bin/env bash\nexec "%s" "$@"\n' "$BIN" > /usr/local/bin/bowtie2
-RUN chmod +x /usr/local/bin/bowtie2 && rm -f /tmp/tool-entry-path
+FROM debian:bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        libbz2-1.0 \
+        liblzma5 \
+        zlib1g \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /src/bowtie2/bowtie2 /usr/local/bin/bowtie2
+COPY --from=builder /src/bowtie2/bowtie2-align-s /usr/local/bin/bowtie2-align-s
+COPY --from=builder /src/bowtie2/bowtie2-align-l /usr/local/bin/bowtie2-align-l
+COPY --from=builder /src/bowtie2/bowtie2-build /usr/local/bin/bowtie2-build
+COPY --from=builder /src/bowtie2/bowtie2-build-s /usr/local/bin/bowtie2-build-s
+COPY --from=builder /src/bowtie2/bowtie2-build-l /usr/local/bin/bowtie2-build-l
+COPY --from=builder /src/bowtie2/bowtie2-inspect /usr/local/bin/bowtie2-inspect
+COPY --from=builder /src/bowtie2/bowtie2-inspect-s /usr/local/bin/bowtie2-inspect-s
+COPY --from=builder /src/bowtie2/bowtie2-inspect-l /usr/local/bin/bowtie2-inspect-l
+
 WORKDIR /data
 ENTRYPOINT ["/usr/local/bin/bowtie2"]
