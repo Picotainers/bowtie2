@@ -29,6 +29,7 @@ RUN apt-get update \
         libbz2-1.0 \
         liblzma5 \
         zlib1g \
+        perl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /src/bowtie2/bowtie2 /usr/local/bin/bowtie2
