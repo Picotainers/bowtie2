@@ -8,7 +8,7 @@ Small compatibility-focused container for `bowtie2`.
 docker pull docker.io/picotainers/bowtie2:latest
 
 # Run the tool
-docker run --rm docker.io/picotainers/bowtie2:latest bowtie2 --help
+docker run --rm docker.io/picotainers/bowtie2:latest --help
 ```
 
 Bowtie2 aligns sequencing reads against reference genomes.
